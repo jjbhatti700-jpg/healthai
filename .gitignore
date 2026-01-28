@@ -1,0 +1,27 @@
+```
+# Dependencies
+node_modules/
+*/node_modules/
+
+# ALL Environment files - VERY IMPORTANT
+.env
+.env.*
+**/.env
+**/.env.*
+server/.env
+client/.env
+
+# Build output
+client/dist
+dist/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
