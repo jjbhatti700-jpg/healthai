@@ -9,14 +9,10 @@ dotenv.config();
 
 const app = express();
 
-// Trust proxy - FIX FOR RAILWAY
 app.set('trust proxy', 1);
 
-// CORS
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? true 
-    : 'http://localhost:5173',
+  origin: process.env.NODE_ENV === 'production' ? true : 'http://localhost:5173',
   credentials: true
 }));
 
@@ -31,46 +27,30 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// MongoDB Connection - WITH FALLBACK CHECK
 const mongoURI = process.env.MONGODB_URI;
-
 if (!mongoURI) {
   console.error('ERROR: MONGODB_URI is not defined!');
-  console.error('Available env vars:', Object.keys(process.env).filter(k => !k.includes('npm')));
 } else {
   mongoose.connect(mongoURI)
-    .then(() => {
-      console.log('Connected to MongoDB');
-    })
-    .catch((err) => {
-      console.error('MongoDB connection error:', err.message);
-    });
+    .then(() => console.log('Connected to MongoDB'))
+    .catch((err) => console.error('MongoDB connection error:', err.message));
 }
 
-// API Routes
+// API Routes FIRST
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/health', require('./routes/health'));
 app.use('/api/conversation', require('./routes/conversation'));
 
-// Serve React build files in production
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../client/dist')));
-  
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
-  });
-} else {
-  app.get('/', (req, res) => {
-    res.json({ 
-      message: 'AI Health Assistant API is running!',
-      status: 'OK',
-      timestamp: new Date().toISOString()
-    });
-  });
-}
+// Serve static files from client/dist
+const clientDistPath = path.join(__dirname, '../client/dist');
+app.use(express.static(clientDistPath));
 
-app.use((req, res, next) => {
-  res.status(404).json({ error: 'Route not found' });
+// Serve assets folder explicitly
+app.use('/assets', express.static(path.join(clientDistPath, 'assets')));
+
+// All other routes serve index.html
+app.get('*', (req, res) => {
+  res.sendFile(path.join(clientDistPath, 'index.html'));
 });
 
 app.use((err, req, res, next) => {
@@ -79,7 +59,4 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
