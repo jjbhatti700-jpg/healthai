@@ -9,7 +9,10 @@ dotenv.config();
 
 const app = express();
 
-// CORS - Allow both local and production
+// Trust proxy - FIX FOR RAILWAY
+app.set('trust proxy', 1);
+
+// CORS
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
     ? true 
@@ -22,17 +25,27 @@ app.use(express.json());
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
-  message: { error: 'Too many requests, please try again later.' }
+  message: { error: 'Too many requests, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 app.use('/api/', limiter);
 
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => {
-    console.log('Connected to MongoDB');
-  })
-  .catch((err) => {
-    console.error('MongoDB connection error:', err.message);
-  });
+// MongoDB Connection - WITH FALLBACK CHECK
+const mongoURI = process.env.MONGODB_URI;
+
+if (!mongoURI) {
+  console.error('ERROR: MONGODB_URI is not defined!');
+  console.error('Available env vars:', Object.keys(process.env).filter(k => !k.includes('npm')));
+} else {
+  mongoose.connect(mongoURI)
+    .then(() => {
+      console.log('Connected to MongoDB');
+    })
+    .catch((err) => {
+      console.error('MongoDB connection error:', err.message);
+    });
+}
 
 // API Routes
 app.use('/api/auth', require('./routes/auth'));
